@@ -1,0 +1,39 @@
+name: SecOps Parser CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Run parser locally (Dry-run test)
+      run: |
+        python parser.py -i report.json -o test_output.json
+        cat test_output.json
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build hardened Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        tags: secops-parser:test
+
+    - name: Test running containerized parser
+      run: |
+        docker run --rm secops-parser:test -i report.json -o docker_output.json
